@@ -1,0 +1,10 @@
+.venv/
+.env
+,env
+memory_db/
+__pycache__/
+*.pyc
+
+data/raw/whatsapp_chat.txt
+data/raw/whatsapp_chat.txt.txt
+data/processed/messages.json
