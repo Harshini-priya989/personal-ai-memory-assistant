@@ -3,8 +3,7 @@ import { createRoot } from "react-dom/client";
 import "./styles.css";
 
 const API_BASE =
-  import.meta.env.VITE_API_URL ||
-  "http://127.0.0.1:5002/api";
+  import.meta.env.VITE_API_URL ;
 
 function App() {
   const [files, setFiles] = useState([]);
