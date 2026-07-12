@@ -2,17 +2,36 @@
 node_modules/
 dist/
 *.log
+package.json
 
 # Python
 .venv/
 __pycache__/
 *.pyc
 
+# Python build cache
+python/__pycache__/
+python/*.pyc
+
 # Chroma / generated memory
 memory_db/
+memory_db/**/
 
-# Uploads / generated artifacts
+# Local data artifacts
 data/processed/
+
+data/**/messages.json
+
+# Node artifacts
+dist/
+dist/**/
+
+# IDE
+.vscode/
+
+
+
+
 
 # Env / secrets
 .env
