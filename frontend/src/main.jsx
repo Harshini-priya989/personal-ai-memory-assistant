@@ -2,7 +2,9 @@ import React, { useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 
-const API_BASE = "http://127.0.0.1:5002/api";
+const API_BASE =
+  import.meta.env.VITE_API_URL ||
+  "http://127.0.0.1:5002/api";
 
 function App() {
   const [files, setFiles] = useState([]);
