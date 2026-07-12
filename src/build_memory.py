@@ -21,8 +21,11 @@ def load_messages():
 
 
 def format_message(message):
+    source = message.get("source_file")
+    source_text = f" ({source})" if source else ""
+
     return (
-        f"[{message['timestamp']}] "
+        f"[{message['timestamp']}]{source_text} "
         f"{message['sender']}: "
         f"{message['message']}"
     )
@@ -53,6 +56,15 @@ def create_chunks(messages):
                 "senders": ", ".join(
                     sorted({message["sender"] for message in chunk_messages})
                 ),
+                "source_files": ", ".join(
+                    sorted(
+                        {
+                            message["source_file"]
+                            for message in chunk_messages
+                            if message.get("source_file")
+                        }
+                    )
+                ),
             },
         )
 
@@ -61,23 +73,35 @@ def create_chunks(messages):
     return documents
 
 
+def rebuild_memory(documents, chroma_path=CHROMA_PATH, collection_name=COLLECTION_NAME):
+    existing_store = Chroma(
+        collection_name=collection_name,
+        persist_directory=str(chroma_path),
+    )
+
+    try:
+        existing_store.delete_collection()
+    except ValueError:
+        pass
+
+    vector_store = Chroma(
+        collection_name=collection_name,
+        persist_directory=str(chroma_path),
+    )
+
+    ids = [f"chunk-{index}" for index in range(len(documents))]
+
+    if documents:
+        vector_store.add_documents(documents=documents, ids=ids)
+
+    return vector_store
+
+
 def main():
     messages = load_messages()
     documents = create_chunks(messages)
 
-    existing_store = Chroma(
-        collection_name=COLLECTION_NAME,
-        persist_directory=str(CHROMA_PATH),
-    )
-    existing_store.delete_collection()
-
-    vector_store = Chroma(
-        collection_name=COLLECTION_NAME,
-        persist_directory=str(CHROMA_PATH),
-    )
-
-    ids = [f"chunk-{index}" for index in range(len(documents))]
-    vector_store.add_documents(documents=documents, ids=ids)
+    rebuild_memory(documents)
 
     print(f"Loaded {len(messages)} messages")
     print(f"Created {len(documents)} memory chunks")

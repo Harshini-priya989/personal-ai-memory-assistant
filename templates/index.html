@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>WhatsIn</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="workspace">
+        <aside class="sidebar">
+          <div class="brand">
+            <div class="mark">W</div>
+            <div>
+              <h1>WhatsIn</h1>
+              <p>Local chat memory</p>
+            </div>
+          </div>
+
+          <form id="upload-form" class="upload-panel">
+            <label class="dropzone" for="chat-files">
+              <span class="drop-title">Upload WhatsApp exports</span>
+              <span class="drop-copy">Select one or many .txt files</span>
+              <input id="chat-files" name="chat_files" type="file" accept=".txt" multiple>
+            </label>
+            <button type="submit" class="primary-button">Index chats</button>
+          </form>
+
+          <div class="stats-grid" aria-live="polite">
+            <div>
+              <span id="file-count">0</span>
+              <label>Files</label>
+            </div>
+            <div>
+              <span id="message-count">0</span>
+              <label>Messages</label>
+            </div>
+            <div>
+              <span id="chunk-count">0</span>
+              <label>Chunks</label>
+            </div>
+          </div>
+
+          <div id="file-list" class="file-list"></div>
+        </aside>
+
+        <section class="chat-area">
+          <div id="conversation" class="conversation" aria-live="polite">
+            <div class="empty-state">
+              <h2>Ask from uploaded chats only.</h2>
+              <p>Answers include retrieved evidence so you can verify the source.</p>
+            </div>
+          </div>
+
+          <form id="question-form" class="question-bar">
+            <input id="question" type="text" autocomplete="off" placeholder="Ask a question about the uploaded chats">
+            <button type="submit" class="send-button" aria-label="Ask">Ask</button>
+          </form>
+        </section>
+      </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+  </body>
+</html>

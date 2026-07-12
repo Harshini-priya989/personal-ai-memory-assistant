@@ -4,7 +4,25 @@
 memory_db/
 __pycache__/
 *.pyc
+node_modules/
+dist/
 
 data/raw/whatsapp_chat.txt
 data/raw/whatsapp_chat.txt.txt
 data/processed/messages.json
+# Personal data
+*.txt
+
+# ngrok
+ngrok.exe
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+
+# Environment variables
+.env

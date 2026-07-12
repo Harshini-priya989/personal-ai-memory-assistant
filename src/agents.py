@@ -19,11 +19,16 @@ class AgentResponse:
     output: str
 
 
+NO_EVIDENCE_ANSWER = (
+    "I could not find enough evidence in the WhatsApp chats to answer that confidently."
+)
+
+
 class MemoryRetrieverAgent:
-    def __init__(self):
+    def __init__(self, chroma_path=CHROMA_PATH, collection_name=COLLECTION_NAME):
         self.vector_store = Chroma(
-            collection_name=COLLECTION_NAME,
-            persist_directory=str(CHROMA_PATH),
+            collection_name=collection_name,
+            persist_directory=str(chroma_path),
         )
 
     def run(self, question, k=4):
@@ -66,11 +71,13 @@ class MemoryRetrieverAgent:
 
         for document in documents:
             start_index = document.metadata.get("start_index")
+            source_files = document.metadata.get("source_files", "")
+            document_key = (start_index, source_files)
 
-            if start_index in seen_indexes:
+            if document_key in seen_indexes:
                 continue
 
-            seen_indexes.add(start_index)
+            seen_indexes.add(document_key)
             deduped.append(document)
 
         return deduped
@@ -111,6 +118,12 @@ class AnswerAgent:
 
     def run(self, question, context):
         prompt = self._build_prompt(question, context)
+        if not context.strip():
+            return AgentResponse(
+                agent_name="LLM Answer Agent",
+                output=NO_EVIDENCE_ANSWER,
+            )
+
         response = self.llm.invoke(prompt)
 
         return AgentResponse(
@@ -128,7 +141,7 @@ Rules:
 - If the context contains the answer, answer directly and briefly.
 - If the user's wording is slightly imprecise, answer with the closest supported fact and mention the limitation.
   Example: if the question asks for a software company but the chat only says an internship/company name, name the company and say the chat does not confirm it is a software company.
-- If the context does not contain enough evidence, say: "I could not find enough evidence in the WhatsApp chats to answer that confidently."
+- If the context does not contain enough evidence, say: "{NO_EVIDENCE_ANSWER}"
 - Do not use outside knowledge.
 - Do not guess.
 - Do not mention that you are an AI model.
@@ -166,8 +179,11 @@ class FaithfulnessAgent:
 
 
 class MemoryAssistant:
-    def __init__(self):
-        self.retriever = MemoryRetrieverAgent()
+    def __init__(self, chroma_path=CHROMA_PATH, collection_name=COLLECTION_NAME):
+        self.retriever = MemoryRetrieverAgent(
+            chroma_path=chroma_path,
+            collection_name=collection_name,
+        )
         self.answerer = AnswerAgent()
         self.checker = FaithfulnessAgent()
 
@@ -178,6 +194,16 @@ class MemoryAssistant:
             answer_result.output,
             retrieval_result.output,
         )
+
+        if faithfulness_result.output.startswith("FAIL"):
+            answer_result = AgentResponse(
+                agent_name=answer_result.agent_name,
+                output=NO_EVIDENCE_ANSWER,
+            )
+            faithfulness_result = self.checker.run(
+                answer_result.output,
+                retrieval_result.output,
+            )
 
         return {
             "question": question,

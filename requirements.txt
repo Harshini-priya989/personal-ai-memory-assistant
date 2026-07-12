@@ -1,0 +1,5 @@
+flask
+langchain-chroma
+langchain-core
+langchain-ollama
+twilio
