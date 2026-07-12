@@ -1,10 +1,10 @@
-# WhatsIn – AI Personal Memory Assistant 🤖💬
+# WhatsIn – AI Personal Memory Assistant
 
 **WhatsIn** is an AI-powered Personal Memory Assistant that answers questions **using only your WhatsApp chat history**.
 
-It parses WhatsApp `.txt` exports → builds a local **ChromaDB** vector store → retrieves relevant evidence → generates an answer grounded strictly in that retrieved context.
+It parses WhatsApp `.txt` exports → builds a local ChromaDB vector store → retrieves relevant evidence → generates an answer grounded strictly in that retrieved context.
 
-> ✅ Design principle: **If the evidence isn’t in your chat context, it will say it can’t answer confidently instead of guessing.**
+> Design principle: If the evidence isn’t in your chat context, it will say it can’t answer confidently instead of guessing.
 
 ---
 
