@@ -3,8 +3,7 @@ const GROQ_URL = process.env.GROQ_URL || "https://api.groq.com/openai/v1";
 export const NO_EVIDENCE_ANSWER =
   "I could not find enough evidence in the WhatsApp chats to answer that confidently.";
 
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.1-8b-instant";
+
 
 function buildPrompt(question, context) {
   return `
@@ -31,11 +30,20 @@ Answer:
 }
 
 export async function answerWithGroq(question, context) {
+    const GROQ_API_KEY = process.env.GROQ_API_KEY;
+  const GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.1-8b-instant";
+    console.log("Groq key exists:", !!GROQ_API_KEY);
+
+  if (!GROQ_API_KEY) {
+    throw new Error("GROQ_API_KEY is not set in environment variables.");
+  }
+
   if (!context || !context.trim()) return NO_EVIDENCE_ANSWER;
 
   if (!GROQ_API_KEY) {
     throw new Error("GROQ_API_KEY is not set in environment variables.");
   }
+  console.log("GROQ_API_KEY exists:", !!process.env.GROQ_API_KEY);
 
   const prompt = buildPrompt(question, context);
 

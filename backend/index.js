@@ -1,6 +1,25 @@
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import dotenv from "dotenv";
+
+// Robust dotenv loading (ESM-safe + absolute path + existence check)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const repoRoot = path.resolve(__dirname, "..");
+const envPath = path.join(repoRoot, ".env");
+
+if (fs.existsSync(envPath)) {
+  dotenv.config({ path: envPath });
+} else {
+  // Keep process running; the API will return a clear error if keys are missing.
+  console.warn(`[WhatsIn] .env not found at: ${envPath}`);
+}
+
 import cors from "cors";
 import express from "express";
 import multer from "multer";
+
 
 import { answerWithGroq, NO_EVIDENCE_ANSWER } from "./groq.js";
 import { getStats, hasMemory, rebuildMemory, retrieveContext } from "./memory.js";
@@ -102,8 +121,46 @@ app.post("/api/upload", upload.array("chatFiles"), (request, response) => {
   return response.json({ status: "ready", ...stats });
 });
 
+app.post("/api/index-from-file", async (request, response) => {
+  const filename = String(request.body?.filename || "").trim();
+
+  if (!filename) {
+    return response.status(400).json({ error: "Provide { filename } in request body." });
+  }
+
+  if (!filename.toLowerCase().endsWith(".txt")) {
+    return response.status(400).json({ error: "Only .txt files are supported." });
+  }
+
+  const filePath = `data/raw/${filename}`;
+
+  try {
+    const fs = await import("fs");
+    const rawText = fs.readFileSync(filePath, "utf8");
+    const messages = parseWhatsAppChat(rawText, filename);
+
+    if (!messages.length) {
+      return response.status(400).json({ error: "No messages parsed from the file." });
+    }
+
+    const fileSummaries = [
+      {
+        name: filename,
+        messages: messages.length,
+        status: "Indexed",
+      },
+    ];
+
+    const stats = rebuildMemory(messages, fileSummaries);
+    return response.json({ status: "ready", ...stats });
+  } catch (error) {
+    return response.status(400).json({ error: "Could not read or parse file.", details: error.message });
+  }
+});
+
 app.post("/api/ask", async (request, response) => {
   const question = String(request.body?.question || "").trim();
+
 
   if (!question) {
     return response.status(400).json({ error: "Enter a question." });
@@ -139,11 +196,12 @@ app.post("/api/ask", async (request, response) => {
       stats: getStats(),
     });
   } catch (error) {
-    return response.status(503).json({
-      error: "Could not reach Groq. Make sure GROQ_API_KEY is set and the model is available.",
-      details: error.message,
-    });
-  }
+  console.error("Groq Error:", error);
+
+  return response.status(503).json({
+    error: error.message,
+  });
+}
 });
 
 app.listen(PORT, () => {
