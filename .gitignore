@@ -1,28 +1,31 @@
-.venv/
-.env
-,env
-memory_db/
-__pycache__/
-*.pyc
+# Node
 node_modules/
 dist/
-
-data/raw/whatsapp_chat.txt
-data/raw/whatsapp_chat.txt.txt
-data/processed/messages.json
-# Personal data
-*.txt
-
-# ngrok
-ngrok.exe
+*.log
 
 # Python
 .venv/
 __pycache__/
 *.pyc
 
-# Node
-node_modules/
+# Chroma / generated memory
+memory_db/
 
-# Environment variables
+# Uploads / generated artifacts
+data/processed/
+
+# Env / secrets
 .env
+.env.*
+
+# ngrok
+ngrok.exe
+
+# OS/Editor
+.DS_Store
+.vscode/
+Thumbs.db
+
+# Optional: ignore local Vite cache
+.vite/
+
