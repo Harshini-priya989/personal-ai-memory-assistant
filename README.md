@@ -1,164 +1,92 @@
-# WhatsIn
+# WhatsIn – AI Personal Memory Assistant 🤖💬
 
-WhatsIn is a personal memory assistant for WhatsApp chats. It parses WhatsApp text exports, builds a local Chroma memory database, and lets you ask questions through a web app or terminal assistant.
+**WhatsIn** is an AI-powered Personal Memory Assistant that answers questions **using only your WhatsApp chat history**.
 
-The assistant is designed to answer only from saved chat evidence. If the retrieved chats do not contain enough information, it should say that instead of guessing.
+It parses WhatsApp `.txt` exports → builds a local **ChromaDB** vector store → retrieves relevant evidence → generates an answer grounded strictly in that retrieved context.
 
-## Features
+> ✅ Design principle: **If the evidence isn’t in your chat context, it will say it can’t answer confidently instead of guessing.**
 
-- Parses WhatsApp `.txt` exports into structured JSON messages
-- Groups messages into overlapping memory chunks
-- Stores chat memory locally with Chroma
-- Retrieves relevant chat evidence with keyword and vector search
-- Answers questions using a local Ollama model
-- Runs a simple faithfulness check against retrieved evidence
-- Provides a local web UI for uploading many personal or group chat exports
+---
 
-## Project Structure
+## What this project does (clear flow)
+
+### 1) Ingest WhatsApp exports
+- Parses WhatsApp text exports (`.txt`) into structured messages (timestamp/sender/message).
+
+### 2) Build memory (RAG index)
+- Chunks messages into overlapping blocks.
+- Embeds and stores those blocks in a persistent local **ChromaDB** index.
+
+### 3) Answer questions (retrieval + grounded generation)
+When you ask a question:
+- It retrieves relevant chat chunks (keyword overlap + vector similarity).
+- It asks an LLM to answer using **only** the retrieved evidence.
+- It performs a lightweight faithfulness/support check; if the answer doesn’t look supported, it returns a **NO_EVIDENCE** response.
+
+---
+
+## Supported usage modes
+
+### A) Terminal assistant (Python + Ollama)
+Run an interactive CLI chat:
+- `python/python/main.py`
+
+This uses:
+- `python/parse_whatsapp.py`
+- `python/build_memory.py`
+- `python/agents.py` (retrieval, answering, faithfulness check)
+
+### B) Web UI (React + Node API + Groq)
+Upload WhatsApp `.txt` exports in the browser and ask questions via a web interface.
+- UI: `frontend/src/main.jsx`
+- API: `backend/index.js`
+
+This web flow uses:
+- Groq for generation (`backend/groq.js`)
+- additional grounding heuristics to reduce hallucinations
+
+---
+
+## Tech stack
+
+- **Frontend:** React (Vite)
+- **Backend (web):** Node/Express
+- **RAG & memory:** LangChain + **ChromaDB**
+- **LLMs:**
+  - Python terminal mode: **Ollama**
+  - Web mode: **Groq**
+- **WhatsApp parsing:** Python parser
+
+---
+
+## Folder structure
 
 ```text
-src/
-  parse_whatsapp.py   # Converts raw WhatsApp chat text into JSON
-  build_memory.py     # Builds the local Chroma memory database
-  agents.py           # Retriever, answer, and faithfulness agents
-  web_app.py          # Local web app for uploads and chat Q&A
-  main.py             # Interactive command-line assistant
-  whatsapp_bot.py     # WhatsApp webhook server for Twilio Sandbox
-  test_retrieval.py   # Quick retrieval test script
+python/
+  parse_whatsapp.py    # Converts raw WhatsApp chat text into JSON
+  build_memory.py      # Builds the local Chroma memory database
+  agents.py            # Retriever, answer, and faithfulness agents
+  main.py              # Interactive command-line assistant
+  whatsapp_bot.py      # Flask webhook server (optional)
+  test_retrieval.py   # Retrieval sanity check
 
 data/
-  raw/                # Put WhatsApp export text files here
-  processed/          # Generated parsed messages
+  raw/                 # WhatsApp export text files (input)
+  processed/           # Parsed messages JSON (output)
 
-memory_db/            # Generated local Chroma database
+memory_db/             # Persisted ChromaDB
+backend/               # Node/Express API + web integration
+frontend/              # React UI
+static/                # Static assets
+templates/             # (if used by server)
 ```
 
-## Requirements
+---
 
-- Python 3.10+
-- Ollama installed and running
-- The `llama3.2:3b` Ollama model
+## Privacy notes (important)
 
-Install the Python packages used by the app:
-
-```bash
-pip install -r requirements.txt
-```
-
-Pull the Ollama model:
-
-```bash
-ollama pull llama3.2:3b
-```
-
-## Setup
-
-1. Create and activate a virtual environment:
-
-```bash
-python -m venv .venv
-.venv\Scripts\activate
-```
-
-2. Put your WhatsApp export at:
-
-```text
-data/raw/training_whatsapp_chat.txt
-```
-
-3. Parse the WhatsApp export:
-
-```bash
-python src/parse_whatsapp.py
-```
-
-4. Build the local memory database:
-
-```bash
-python src/build_memory.py
-```
-
-5. Start the web app:
-
-```bash
-python src/web_app.py
-```
-
-Open:
-
-```text
-http://127.0.0.1:5001
-```
-
-Upload one or many WhatsApp `.txt` exports, then ask questions in the browser.
-
-6. Or start the terminal assistant:
-
-```bash
-python src/main.py
-```
-
-Then ask questions in the terminal. Type `exit` or `quit` to stop.
-
-## Later: Attach It To WhatsApp
-
-The simplest development path is Twilio's WhatsApp Sandbox. Your WhatsApp message goes to Twilio, Twilio calls your local webhook, and WhatsIn replies using the local memory database.
-
-1. Build the memory database first:
-
-```bash
-python src/parse_whatsapp.py
-python src/build_memory.py
-```
-
-2. Start the WhatsApp webhook server:
-
-```bash
-python src/whatsapp_bot.py
-```
-
-3. Expose the local server with a tunnel such as ngrok:
-
-```bash
-ngrok http 5000
-```
-
-4. In Twilio's WhatsApp Sandbox settings, set the incoming message webhook to:
-
-```text
-https://your-ngrok-domain.ngrok-free.app/whatsapp
-```
-
-Use `HTTP POST`.
-
-5. Join the Twilio Sandbox from your phone, then send a question like:
-
-```text
-Who mentioned the hostel?
-```
-
-### Optional Sender Lock
-
-To restrict the bot to your own WhatsApp number, set `WHATSIN_ALLOWED_SENDERS` before starting the server:
-
-```bash
-$env:WHATSIN_ALLOWED_SENDERS="whatsapp:+919876543210"
-python src/whatsapp_bot.py
-```
-
-If this variable is empty, any sender that can reach the webhook can ask questions against your local memory database.
-
-## Quick Retrieval Test
-
-To test whether Chroma is returning relevant chat chunks:
-
-```bash
-python src/test_retrieval.py
-```
-
-## Privacy Notes
-
-WhatsApp exports can contain private conversations, phone numbers, names, and personal details. Before uploading to GitHub, avoid committing:
+WhatsApp exports can contain private information (phone numbers, names, message content).
+Before uploading to GitHub, avoid committing:
 
 - `.env`
 - `.venv/`
@@ -166,15 +94,98 @@ WhatsApp exports can contain private conversations, phone numbers, names, and pe
 - `data/processed/messages.json`
 - private raw WhatsApp exports in `data/raw/`
 
-The existing `.gitignore` already excludes generated memory files and common local environment files. Double-check `git status` before publishing.
+Also review `.gitignore` and run `git status` before pushing.
 
-Do not connect the webhook to a public URL unless you understand who can message it. For personal use, prefer a sandbox plus `WHATSIN_ALLOWED_SENDERS`.
+---
 
-## How It Works
+## Setup (Python / Ollama terminal mode)
 
-1. `parse_whatsapp.py` reads the raw WhatsApp text export and writes structured messages to `data/processed/messages.json`.
-2. `build_memory.py` chunks those messages and stores them in a local Chroma collection named `whatsapp_memory`.
-3. `web_app.py` accepts uploaded chat exports, rebuilds a web-specific Chroma collection, and answers questions using only the uploaded chats.
-4. `main.py` starts an interactive assistant that retrieves relevant memory chunks, asks Ollama to answer using only that context, and prints the retrieved evidence.
-5. `whatsapp_bot.py` exposes the same assistant through a Twilio-compatible WhatsApp webhook for the later integration step.
-"# whatsin" 
+### 1) Python dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 2) Pull Ollama model
+
+```bash
+ollama pull llama3.2:3b
+```
+
+### 3) Put your WhatsApp export
+
+Place your export here:
+
+```text
+data/raw/training_whatsapp_chat.txt
+```
+
+### 4) Parse + build memory
+
+```bash
+python python/parse_whatsapp.py
+python python/build_memory.py
+```
+
+### 5) Run the terminal assistant
+
+```bash
+python python/main.py
+```
+
+---
+
+## Optional: Flask WhatsApp webhook server
+
+1) Build memory first:
+
+```bash
+python python/parse_whatsapp.py
+python python/build_memory.py
+```
+
+2) Start the server:
+
+```bash
+python python/whatsapp_bot.py
+```
+
+- Route: `POST /whatsapp`
+- Port: `5000` by default (override with `PORT`)
+
+Optional sender allowlist:
+
+- Set `WHATSIN_ALLOWED_SENDERS` to a comma-separated list
+
+Example (PowerShell):
+
+```powershell
+$env:WHATSIN_ALLOWED_SENDERS="whatsapp:+919876543210"
+python python/whatsapp_bot.py
+```
+
+---
+
+## Optional: Quick retrieval test
+
+```bash
+python python/test_retrieval.py
+```
+
+---
+
+## How it works (grounded RAG)
+
+1. **Parsing:** WhatsApp `.txt` exports → structured message objects.
+2. **Chunking:** overlapping windows preserve context.
+3. **Indexing:** chunks stored in Chroma with metadata.
+4. **Retrieval:** keyword scoring + vector similarity; dedupe and order.
+5. **Generation:** LLM prompted to answer **ONLY** from retrieved context.
+6. **Faithfulness check:** if the answer isn’t supported, returns **NO_EVIDENCE**.
+
+---
+
+## License
+
+MIT
+
