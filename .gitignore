@@ -4,7 +4,7 @@ dist/
 *.log
 package.json
 TODO.md
-
+whatsapp_chat.txt
 # Python
 .venv/
 __pycache__/
